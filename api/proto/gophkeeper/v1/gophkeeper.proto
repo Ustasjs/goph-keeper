@@ -1,0 +1,184 @@
+// GophKeeper API.
+edition = "2023";
+
+package gophkeeper.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+
+option go_package = "github.com/ustasjs/goph-keeper/pkg/proto/gophkeeper/v1;gophkeeperv1";
+
+// AuthService creates users and logs them in.
+//
+// Crypto contract: the client encrypts all secret data with a
+// random data key (DEK). The DEK is wrapped (encrypted) with a
+// key derived from the master password (KEK, Argon2id). The
+// server stores only the wrapped DEK, the KDF salt and the KDF
+// params. The server never sees the master password, the KEK,
+// the DEK, or any plain data.
+service AuthService {
+  // Register creates a new user and returns an auth token.
+  //
+  // The client generates kek_salt, kdf_params and encrypted_dek
+  // and sends them here. The server stores them as-is.
+  //
+  // ALREADY_EXISTS: login is taken.
+  // INVALID_ARGUMENT: empty login or password, or bad crypto fields.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login checks the account password. It returns an auth token
+  // and the stored crypto fields, so the client can unwrap the DEK.
+  //
+  // UNAUTHENTICATED: unknown login or wrong password.
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
+
+// SecretsService stores encrypted user records.
+//
+// Auth: put the JWT from Login into the "authorization" metadata
+// header. Every successful response carries a fresh token in the
+// "authorization" response header; the client saves it. This
+// extends the session on every call.
+//
+// Every RPC here returns UNAUTHENTICATED when the token is
+// missing, bad, or expired.
+//
+// Write conflicts: last write wins. The server accepts every
+// update and bumps the version. The version field only tells
+// clients that the record changed; the server never rejects a
+// write because of an old version.
+service SecretsService {
+  // CreateSecret saves a new record.
+  //
+  // INVALID_ARGUMENT: empty payload or unknown type.
+  rpc CreateSecret(CreateSecretRequest) returns (CreateSecretResponse);
+
+  // GetSecret returns one record by id.
+  //
+  // NOT_FOUND: this user has no record with this id, or it was deleted.
+  // INVALID_ARGUMENT: id is not a valid UUID.
+  rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
+
+  // ListSecrets returns all records of the caller.
+  // Deleted records are not included. No records means an empty
+  // list and OK, not an error.
+  rpc ListSecrets(ListSecretsRequest) returns (ListSecretsResponse);
+
+  // UpdateSecret replaces the payload of a record. Last write
+  // wins: the server does not compare versions, it just bumps one.
+  //
+  // NOT_FOUND: this user has no record with this id, or it was deleted.
+  // INVALID_ARGUMENT: empty payload or bad id.
+  rpc UpdateSecret(UpdateSecretRequest) returns (UpdateSecretResponse);
+
+  // DeleteSecret marks a record as deleted (soft delete).
+  // Deleting an already deleted record returns NOT_FOUND.
+  //
+  // NOT_FOUND: this user has no record with this id.
+  // INVALID_ARGUMENT: id is not a valid UUID.
+  rpc DeleteSecret(DeleteSecretRequest) returns (DeleteSecretResponse);
+}
+
+// KdfParams are the Argon2id settings used to derive the KEK
+// from the master password. The client picks them at register
+// time; the server stores and returns them as-is.
+message KdfParams {
+  // Memory size in KiB.
+  uint32 memory_kib = 1;
+  // Number of passes over the memory.
+  uint32 time = 2;
+  // Number of parallel threads.
+  uint32 threads = 3;
+}
+
+message RegisterRequest {
+  string login = 1;
+  // Account password. It protects the account, not the data.
+  // It must not be the master password.
+  string password = 2;
+  // Random salt for the KEK derivation.
+  bytes kek_salt = 3;
+  KdfParams kdf_params = 4;
+  // DEK encrypted with the KEK (AES-256-GCM).
+  bytes encrypted_dek = 5;
+}
+
+message RegisterResponse {
+  string token = 1;
+}
+
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 1;
+  bytes kek_salt = 2;
+  KdfParams kdf_params = 3;
+  bytes encrypted_dek = 4;
+}
+
+// SecretType says what kind of data is inside the payload.
+// The type is set at create time and cannot change.
+enum SecretType {
+  SECRET_TYPE_UNSPECIFIED = 0;
+  SECRET_TYPE_LOGIN_PASSWORD = 1;
+  SECRET_TYPE_TEXT = 2;
+  SECRET_TYPE_BINARY = 3;
+  SECRET_TYPE_CARD = 4;
+}
+
+// Secret is one stored record. The payload is an encrypted JSON
+// blob with the name, the metadata and the type-specific fields.
+// The server cannot read it.
+message Secret {
+  string id = 1;
+  SecretType type = 2;
+  bytes encrypted_payload = 3;
+  // Grows on every update. Informational only, see SecretsService.
+  int64 version = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message CreateSecretRequest {
+  SecretType type = 1;
+  bytes encrypted_payload = 2;
+}
+
+message CreateSecretResponse {
+  string id = 1;
+  int64 version = 2;
+}
+
+message GetSecretRequest {
+  string id = 1;
+}
+
+message GetSecretResponse {
+  Secret secret = 1;
+}
+
+message ListSecretsRequest {}
+
+message ListSecretsResponse {
+  repeated Secret secrets = 1;
+}
+
+message UpdateSecretRequest {
+  string id = 1;
+  bytes encrypted_payload = 2;
+}
+
+message UpdateSecretResponse {
+  int64 version = 1;
+}
+
+message DeleteSecretRequest {
+  string id = 1;
+}
+
+message DeleteSecretResponse {}

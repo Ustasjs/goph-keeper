@@ -6,7 +6,7 @@ VERSION ?= $(shell git describe --tags --always 2>/dev/null || echo dev)
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.buildVersion=$(VERSION) -X main.buildDate=$(BUILD_DATE)
 
-.PHONY: test lint build proto-tools
+.PHONY: test lint build proto proto-tools
 
 test:
 	go test ./... -count=1
@@ -18,6 +18,13 @@ lint:
 build:
 	go build -ldflags "$(LDFLAGS)" -o bin/server ./cmd/server
 	go build -ldflags "$(LDFLAGS)" -o bin/client ./cmd/client
+
+# Generate Go code from proto files into pkg/proto.
+proto:
+	protoc -I api/proto \
+		--go_out=.      --go_opt=module=github.com/ustasjs/goph-keeper \
+		--go-grpc_out=. --go-grpc_opt=module=github.com/ustasjs/goph-keeper \
+		api/proto/gophkeeper/v1/gophkeeper.proto
 
 # Install protoc plugins with pinned versions.
 proto-tools:
