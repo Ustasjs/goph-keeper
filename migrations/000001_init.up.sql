@@ -2,9 +2,9 @@
 -- material: the server stores them but cannot use them.
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    login text NOT NULL UNIQUE,
-    -- Argon2id hash of the account password.
-    password_hash text NOT NULL,
+    login varchar(255) NOT NULL UNIQUE,
+    -- Argon2id hash of the account password
+    password_hash varchar(255) NOT NULL,
     -- Random salt for the KEK derivation on the client.
     kek_salt bytea NOT NULL,
     -- Argon2id params for the KEK derivation (memory, time, threads).
@@ -20,7 +20,7 @@ CREATE TABLE users (
 CREATE TABLE secrets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    type text NOT NULL CHECK (type IN ('login_password', 'text', 'binary', 'card')),
+    type varchar(20) NOT NULL CHECK (type IN ('login_password', 'text', 'binary', 'card')),
     encrypted_payload bytea NOT NULL,
     version bigint NOT NULL DEFAULT 1,
     deleted boolean NOT NULL DEFAULT false,
