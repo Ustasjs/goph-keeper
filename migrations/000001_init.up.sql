@@ -31,4 +31,4 @@ CREATE TABLE secrets (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX secrets_user_id_idx ON secrets (user_id);
+CREATE INDEX secrets_user_id_live_idx ON secrets (user_id) WHERE deleted = false;
