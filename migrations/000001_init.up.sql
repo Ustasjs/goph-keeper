@@ -18,12 +18,15 @@ CREATE TABLE users (
 CREATE TYPE secret_type AS ENUM ('login_password', 'text', 'binary', 'card');
 
 -- Secrets. The payload is an encrypted blob; the server cannot
--- read it. "version" grows on every update (last write wins).
--- "deleted" is a soft-delete flag.
+-- read it. The name and the metadata are plain text, so the
+-- server can list and search by them. "version" grows on every
+-- update (last write wins). "deleted" is a soft-delete flag.
 CREATE TABLE secrets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     type secret_type NOT NULL,
+    name varchar(255) NOT NULL,
+    metadata text NOT NULL DEFAULT '',
     encrypted_payload bytea NOT NULL,
     version bigint NOT NULL DEFAULT 1,
     deleted boolean NOT NULL DEFAULT false,

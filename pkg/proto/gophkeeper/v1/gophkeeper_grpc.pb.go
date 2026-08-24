@@ -36,7 +36,9 @@ const (
 // key derived from the master password (KEK, Argon2id). The
 // server stores only the wrapped DEK, the KDF salt and the KDF
 // params. The server never sees the master password, the KEK,
-// the DEK, or any plain data.
+// the DEK, or the payload content. Record names and metadata
+// are plain text by design, so the server can list and search
+// by them (see Secret).
 type AuthServiceClient interface {
 	// Register creates a new user and returns an auth token.
 	//
@@ -92,7 +94,9 @@ func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 // key derived from the master password (KEK, Argon2id). The
 // server stores only the wrapped DEK, the KDF salt and the KDF
 // params. The server never sees the master password, the KEK,
-// the DEK, or any plain data.
+// the DEK, or the payload content. Record names and metadata
+// are plain text by design, so the server can list and search
+// by them (see Secret).
 type AuthServiceServer interface {
 	// Register creates a new user and returns an auth token.
 	//
@@ -229,7 +233,7 @@ const (
 type SecretsServiceClient interface {
 	// CreateSecret saves a new record.
 	//
-	// INVALID_ARGUMENT: empty payload or unknown type.
+	// INVALID_ARGUMENT: empty name, empty payload, or unknown type.
 	CreateSecret(ctx context.Context, in *CreateSecretRequest, opts ...grpc.CallOption) (*CreateSecretResponse, error)
 	// GetSecret returns one record by id.
 	//
@@ -240,11 +244,12 @@ type SecretsServiceClient interface {
 	// Deleted records are not included. No records means an empty
 	// list and OK, not an error.
 	ListSecrets(ctx context.Context, in *ListSecretsRequest, opts ...grpc.CallOption) (*ListSecretsResponse, error)
-	// UpdateSecret replaces the payload of a record. Last write
-	// wins: the server does not compare versions, it just bumps one.
+	// UpdateSecret replaces the name, the metadata and the payload
+	// of a record. Last write wins: the server does not compare
+	// versions, it just bumps one.
 	//
 	// NOT_FOUND: this user has no record with this id, or it was deleted.
-	// INVALID_ARGUMENT: empty payload or bad id.
+	// INVALID_ARGUMENT: empty name, empty payload, or bad id.
 	UpdateSecret(ctx context.Context, in *UpdateSecretRequest, opts ...grpc.CallOption) (*UpdateSecretResponse, error)
 	// DeleteSecret marks a record as deleted (soft delete).
 	// Deleting an already deleted record returns NOT_FOUND.
@@ -333,7 +338,7 @@ func (c *secretsServiceClient) DeleteSecret(ctx context.Context, in *DeleteSecre
 type SecretsServiceServer interface {
 	// CreateSecret saves a new record.
 	//
-	// INVALID_ARGUMENT: empty payload or unknown type.
+	// INVALID_ARGUMENT: empty name, empty payload, or unknown type.
 	CreateSecret(context.Context, *CreateSecretRequest) (*CreateSecretResponse, error)
 	// GetSecret returns one record by id.
 	//
@@ -344,11 +349,12 @@ type SecretsServiceServer interface {
 	// Deleted records are not included. No records means an empty
 	// list and OK, not an error.
 	ListSecrets(context.Context, *ListSecretsRequest) (*ListSecretsResponse, error)
-	// UpdateSecret replaces the payload of a record. Last write
-	// wins: the server does not compare versions, it just bumps one.
+	// UpdateSecret replaces the name, the metadata and the payload
+	// of a record. Last write wins: the server does not compare
+	// versions, it just bumps one.
 	//
 	// NOT_FOUND: this user has no record with this id, or it was deleted.
-	// INVALID_ARGUMENT: empty payload or bad id.
+	// INVALID_ARGUMENT: empty name, empty payload, or bad id.
 	UpdateSecret(context.Context, *UpdateSecretRequest) (*UpdateSecretResponse, error)
 	// DeleteSecret marks a record as deleted (soft delete).
 	// Deleting an already deleted record returns NOT_FOUND.

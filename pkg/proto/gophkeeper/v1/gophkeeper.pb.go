@@ -782,16 +782,19 @@ func (b0 LoginResponse_builder) Build() *LoginResponse {
 }
 
 // Secret is one stored record. The payload is an encrypted JSON
-// blob with the name, the metadata and the type-specific fields.
-// The server cannot read it.
+// blob with the type-specific fields; the server cannot read it.
+// The name and the metadata are plain text: the server can list
+// and search by them.
 type Secret struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id               *string                `protobuf:"bytes,1,opt,name=id"`
 	xxx_hidden_Type             SecretType             `protobuf:"varint,2,opt,name=type,enum=gophkeeper.v1.SecretType"`
-	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,3,opt,name=encrypted_payload,json=encryptedPayload"`
-	xxx_hidden_Version          int64                  `protobuf:"varint,4,opt,name=version"`
-	xxx_hidden_CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt"`
-	xxx_hidden_UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt"`
+	xxx_hidden_Name             *string                `protobuf:"bytes,3,opt,name=name"`
+	xxx_hidden_Metadata         *string                `protobuf:"bytes,4,opt,name=metadata"`
+	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,5,opt,name=encrypted_payload,json=encryptedPayload"`
+	xxx_hidden_Version          int64                  `protobuf:"varint,6,opt,name=version"`
+	xxx_hidden_CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt"`
+	xxx_hidden_UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt"`
 	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
 	XXX_presence                [1]uint32
 	unknownFields               protoimpl.UnknownFields
@@ -842,6 +845,26 @@ func (x *Secret) GetType() SecretType {
 	return SecretType_SECRET_TYPE_UNSPECIFIED
 }
 
+func (x *Secret) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Secret) GetMetadata() string {
+	if x != nil {
+		if x.xxx_hidden_Metadata != nil {
+			return *x.xxx_hidden_Metadata
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *Secret) GetEncryptedPayload() []byte {
 	if x != nil {
 		return x.xxx_hidden_EncryptedPayload
@@ -872,12 +895,22 @@ func (x *Secret) GetUpdatedAt() *timestamppb.Timestamp {
 
 func (x *Secret) SetId(v string) {
 	x.xxx_hidden_Id = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 8)
 }
 
 func (x *Secret) SetType(v SecretType) {
 	x.xxx_hidden_Type = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 8)
+}
+
+func (x *Secret) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 8)
+}
+
+func (x *Secret) SetMetadata(v string) {
+	x.xxx_hidden_Metadata = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
 }
 
 func (x *Secret) SetEncryptedPayload(v []byte) {
@@ -885,12 +918,12 @@ func (x *Secret) SetEncryptedPayload(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_EncryptedPayload = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 8)
 }
 
 func (x *Secret) SetVersion(v int64) {
 	x.xxx_hidden_Version = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 8)
 }
 
 func (x *Secret) SetCreatedAt(v *timestamppb.Timestamp) {
@@ -915,18 +948,32 @@ func (x *Secret) HasType() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *Secret) HasEncryptedPayload() bool {
+func (x *Secret) HasName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
-func (x *Secret) HasVersion() bool {
+func (x *Secret) HasMetadata() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *Secret) HasEncryptedPayload() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *Secret) HasVersion() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
 }
 
 func (x *Secret) HasCreatedAt() bool {
@@ -953,13 +1000,23 @@ func (x *Secret) ClearType() {
 	x.xxx_hidden_Type = SecretType_SECRET_TYPE_UNSPECIFIED
 }
 
-func (x *Secret) ClearEncryptedPayload() {
+func (x *Secret) ClearName() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *Secret) ClearMetadata() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Metadata = nil
+}
+
+func (x *Secret) ClearEncryptedPayload() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
 	x.xxx_hidden_EncryptedPayload = nil
 }
 
 func (x *Secret) ClearVersion() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
 	x.xxx_hidden_Version = 0
 }
 
@@ -974,8 +1031,11 @@ func (x *Secret) ClearUpdatedAt() {
 type Secret_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id               *string
-	Type             *SecretType
+	Id   *string
+	Type *SecretType
+	Name *string
+	// Free-form text: site, bank, one-time codes, and so on.
+	Metadata         *string
 	EncryptedPayload []byte
 	// Grows on every update. Informational only, see SecretsService.
 	Version   *int64
@@ -988,19 +1048,27 @@ func (b0 Secret_builder) Build() *Secret {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 8)
 		x.xxx_hidden_Id = b.Id
 	}
 	if b.Type != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 8)
 		x.xxx_hidden_Type = *b.Type
 	}
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 8)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Metadata != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
+		x.xxx_hidden_Metadata = b.Metadata
+	}
 	if b.EncryptedPayload != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
 		x.xxx_hidden_EncryptedPayload = b.EncryptedPayload
 	}
 	if b.Version != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 8)
 		x.xxx_hidden_Version = *b.Version
 	}
 	x.xxx_hidden_CreatedAt = b.CreatedAt
@@ -1011,7 +1079,9 @@ func (b0 Secret_builder) Build() *Secret {
 type CreateSecretRequest struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Type             SecretType             `protobuf:"varint,1,opt,name=type,enum=gophkeeper.v1.SecretType"`
-	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,2,opt,name=encrypted_payload,json=encryptedPayload"`
+	xxx_hidden_Name             *string                `protobuf:"bytes,2,opt,name=name"`
+	xxx_hidden_Metadata         *string                `protobuf:"bytes,3,opt,name=metadata"`
+	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,4,opt,name=encrypted_payload,json=encryptedPayload"`
 	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
 	XXX_presence                [1]uint32
 	unknownFields               protoimpl.UnknownFields
@@ -1052,6 +1122,26 @@ func (x *CreateSecretRequest) GetType() SecretType {
 	return SecretType_SECRET_TYPE_UNSPECIFIED
 }
 
+func (x *CreateSecretRequest) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *CreateSecretRequest) GetMetadata() string {
+	if x != nil {
+		if x.xxx_hidden_Metadata != nil {
+			return *x.xxx_hidden_Metadata
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *CreateSecretRequest) GetEncryptedPayload() []byte {
 	if x != nil {
 		return x.xxx_hidden_EncryptedPayload
@@ -1061,7 +1151,17 @@ func (x *CreateSecretRequest) GetEncryptedPayload() []byte {
 
 func (x *CreateSecretRequest) SetType(v SecretType) {
 	x.xxx_hidden_Type = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *CreateSecretRequest) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *CreateSecretRequest) SetMetadata(v string) {
+	x.xxx_hidden_Metadata = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
 }
 
 func (x *CreateSecretRequest) SetEncryptedPayload(v []byte) {
@@ -1069,7 +1169,7 @@ func (x *CreateSecretRequest) SetEncryptedPayload(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_EncryptedPayload = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
 }
 
 func (x *CreateSecretRequest) HasType() bool {
@@ -1079,11 +1179,25 @@ func (x *CreateSecretRequest) HasType() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
-func (x *CreateSecretRequest) HasEncryptedPayload() bool {
+func (x *CreateSecretRequest) HasName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *CreateSecretRequest) HasMetadata() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *CreateSecretRequest) HasEncryptedPayload() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
 }
 
 func (x *CreateSecretRequest) ClearType() {
@@ -1091,8 +1205,18 @@ func (x *CreateSecretRequest) ClearType() {
 	x.xxx_hidden_Type = SecretType_SECRET_TYPE_UNSPECIFIED
 }
 
-func (x *CreateSecretRequest) ClearEncryptedPayload() {
+func (x *CreateSecretRequest) ClearName() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *CreateSecretRequest) ClearMetadata() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Metadata = nil
+}
+
+func (x *CreateSecretRequest) ClearEncryptedPayload() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
 	x.xxx_hidden_EncryptedPayload = nil
 }
 
@@ -1100,6 +1224,8 @@ type CreateSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Type             *SecretType
+	Name             *string
+	Metadata         *string
 	EncryptedPayload []byte
 }
 
@@ -1108,11 +1234,19 @@ func (b0 CreateSecretRequest_builder) Build() *CreateSecretRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Type != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
 		x.xxx_hidden_Type = *b.Type
 	}
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Metadata != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_Metadata = b.Metadata
+	}
 	if b.EncryptedPayload != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
 		x.xxx_hidden_EncryptedPayload = b.EncryptedPayload
 	}
 	return m0
@@ -1477,7 +1611,9 @@ func (b0 ListSecretsResponse_builder) Build() *ListSecretsResponse {
 type UpdateSecretRequest struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id               *string                `protobuf:"bytes,1,opt,name=id"`
-	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,2,opt,name=encrypted_payload,json=encryptedPayload"`
+	xxx_hidden_Name             *string                `protobuf:"bytes,2,opt,name=name"`
+	xxx_hidden_Metadata         *string                `protobuf:"bytes,3,opt,name=metadata"`
+	xxx_hidden_EncryptedPayload []byte                 `protobuf:"bytes,4,opt,name=encrypted_payload,json=encryptedPayload"`
 	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
 	XXX_presence                [1]uint32
 	unknownFields               protoimpl.UnknownFields
@@ -1519,6 +1655,26 @@ func (x *UpdateSecretRequest) GetId() string {
 	return ""
 }
 
+func (x *UpdateSecretRequest) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UpdateSecretRequest) GetMetadata() string {
+	if x != nil {
+		if x.xxx_hidden_Metadata != nil {
+			return *x.xxx_hidden_Metadata
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *UpdateSecretRequest) GetEncryptedPayload() []byte {
 	if x != nil {
 		return x.xxx_hidden_EncryptedPayload
@@ -1528,7 +1684,17 @@ func (x *UpdateSecretRequest) GetEncryptedPayload() []byte {
 
 func (x *UpdateSecretRequest) SetId(v string) {
 	x.xxx_hidden_Id = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *UpdateSecretRequest) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *UpdateSecretRequest) SetMetadata(v string) {
+	x.xxx_hidden_Metadata = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
 }
 
 func (x *UpdateSecretRequest) SetEncryptedPayload(v []byte) {
@@ -1536,7 +1702,7 @@ func (x *UpdateSecretRequest) SetEncryptedPayload(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_EncryptedPayload = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
 }
 
 func (x *UpdateSecretRequest) HasId() bool {
@@ -1546,11 +1712,25 @@ func (x *UpdateSecretRequest) HasId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
-func (x *UpdateSecretRequest) HasEncryptedPayload() bool {
+func (x *UpdateSecretRequest) HasName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *UpdateSecretRequest) HasMetadata() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *UpdateSecretRequest) HasEncryptedPayload() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
 }
 
 func (x *UpdateSecretRequest) ClearId() {
@@ -1558,8 +1738,18 @@ func (x *UpdateSecretRequest) ClearId() {
 	x.xxx_hidden_Id = nil
 }
 
-func (x *UpdateSecretRequest) ClearEncryptedPayload() {
+func (x *UpdateSecretRequest) ClearName() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *UpdateSecretRequest) ClearMetadata() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Metadata = nil
+}
+
+func (x *UpdateSecretRequest) ClearEncryptedPayload() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
 	x.xxx_hidden_EncryptedPayload = nil
 }
 
@@ -1567,6 +1757,8 @@ type UpdateSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Id               *string
+	Name             *string
+	Metadata         *string
 	EncryptedPayload []byte
 }
 
@@ -1575,11 +1767,19 @@ func (b0 UpdateSecretRequest_builder) Build() *UpdateSecretRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
 		x.xxx_hidden_Id = b.Id
 	}
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Metadata != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_Metadata = b.Metadata
+	}
 	if b.EncryptedPayload != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
 		x.xxx_hidden_EncryptedPayload = b.EncryptedPayload
 	}
 	return m0
@@ -1808,19 +2008,23 @@ const file_gophkeeper_v1_gophkeeper_proto_rawDesc = "" +
 	"\bkek_salt\x18\x02 \x01(\fR\akekSalt\x127\n" +
 	"\n" +
 	"kdf_params\x18\x03 \x01(\v2\x18.gophkeeper.v1.KdfParamsR\tkdfParams\x12#\n" +
-	"\rencrypted_dek\x18\x04 \x01(\fR\fencryptedDek\"\x84\x02\n" +
+	"\rencrypted_dek\x18\x04 \x01(\fR\fencryptedDek\"\xb4\x02\n" +
 	"\x06Secret\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12-\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x19.gophkeeper.v1.SecretTypeR\x04type\x12+\n" +
-	"\x11encrypted_payload\x18\x03 \x01(\fR\x10encryptedPayload\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\x03R\aversion\x129\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x19.gophkeeper.v1.SecretTypeR\x04type\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1a\n" +
+	"\bmetadata\x18\x04 \x01(\tR\bmetadata\x12+\n" +
+	"\x11encrypted_payload\x18\x05 \x01(\fR\x10encryptedPayload\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\x03R\aversion\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"q\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xa1\x01\n" +
 	"\x13CreateSecretRequest\x12-\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x19.gophkeeper.v1.SecretTypeR\x04type\x12+\n" +
-	"\x11encrypted_payload\x18\x02 \x01(\fR\x10encryptedPayload\"@\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x19.gophkeeper.v1.SecretTypeR\x04type\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bmetadata\x18\x03 \x01(\tR\bmetadata\x12+\n" +
+	"\x11encrypted_payload\x18\x04 \x01(\fR\x10encryptedPayload\"@\n" +
 	"\x14CreateSecretResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x03R\aversion\"\"\n" +
@@ -1830,10 +2034,12 @@ const file_gophkeeper_v1_gophkeeper_proto_rawDesc = "" +
 	"\x06secret\x18\x01 \x01(\v2\x15.gophkeeper.v1.SecretR\x06secret\"\x14\n" +
 	"\x12ListSecretsRequest\"F\n" +
 	"\x13ListSecretsResponse\x12/\n" +
-	"\asecrets\x18\x01 \x03(\v2\x15.gophkeeper.v1.SecretR\asecrets\"R\n" +
+	"\asecrets\x18\x01 \x03(\v2\x15.gophkeeper.v1.SecretR\asecrets\"\x82\x01\n" +
 	"\x13UpdateSecretRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
-	"\x11encrypted_payload\x18\x02 \x01(\fR\x10encryptedPayload\"0\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\bmetadata\x18\x03 \x01(\tR\bmetadata\x12+\n" +
+	"\x11encrypted_payload\x18\x04 \x01(\fR\x10encryptedPayload\"0\n" +
 	"\x14UpdateSecretResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x03R\aversion\"%\n" +
 	"\x13DeleteSecretRequest\x12\x0e\n" +
