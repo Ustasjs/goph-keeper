@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/ustasjs/goph-keeper/internal/server/secret"
+	"github.com/ustasjs/goph-keeper/internal/secret"
 )
 
 // The queries filter with "deleted = false" written exactly like

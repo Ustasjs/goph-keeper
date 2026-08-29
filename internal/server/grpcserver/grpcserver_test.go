@@ -17,8 +17,8 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/ustasjs/goph-keeper/internal/secret"
 	"github.com/ustasjs/goph-keeper/internal/server/auth"
-	"github.com/ustasjs/goph-keeper/internal/server/secret"
 	"github.com/ustasjs/goph-keeper/internal/server/token"
 	gophkeeperv1 "github.com/ustasjs/goph-keeper/pkg/proto/gophkeeper/v1"
 )

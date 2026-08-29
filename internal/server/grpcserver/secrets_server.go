@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/ustasjs/goph-keeper/internal/server/secret"
+	"github.com/ustasjs/goph-keeper/internal/secret"
 	gophkeeperv1 "github.com/ustasjs/goph-keeper/pkg/proto/gophkeeper/v1"
 )
 

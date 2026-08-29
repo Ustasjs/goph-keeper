@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ustasjs/goph-keeper/internal/secret"
 	"github.com/ustasjs/goph-keeper/internal/server/auth"
-	"github.com/ustasjs/goph-keeper/internal/server/secret"
 	"github.com/ustasjs/goph-keeper/migrations"
 )
 

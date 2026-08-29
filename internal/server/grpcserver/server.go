@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/ustasjs/goph-keeper/internal/secret"
 	"github.com/ustasjs/goph-keeper/internal/server/auth"
-	"github.com/ustasjs/goph-keeper/internal/server/secret"
 	gophkeeperv1 "github.com/ustasjs/goph-keeper/pkg/proto/gophkeeper/v1"
 )
 
