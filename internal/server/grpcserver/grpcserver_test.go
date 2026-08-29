@@ -256,6 +256,32 @@ func TestAuthInterceptor(t *testing.T) {
 	})
 }
 
+// panicSecretStore panics on every call, like a handler that
+// hits a bug.
+type panicSecretStore struct {
+	SecretStore
+}
+
+func (panicSecretStore) ListSecrets(_ context.Context, _ string) ([]secret.Secret, error) {
+	panic("boom")
+}
+
+func TestRecoveryInterceptor(t *testing.T) {
+	t.Parallel()
+
+	tokens := testTokens(t)
+	_, secretsClient := newTestClients(t, &fakeAuthService{}, panicSecretStore{}, tokens)
+	ctx := authedContext(t, tokens, "user-1")
+
+	// The panic becomes one Internal error, not a dead server.
+	_, err := secretsClient.ListSecrets(ctx, &gophkeeperv1.ListSecretsRequest{})
+	assert.Equal(t, codes.Internal, status.Code(err))
+
+	// The server still serves the next call.
+	_, err = secretsClient.ListSecrets(ctx, &gophkeeperv1.ListSecretsRequest{})
+	assert.Equal(t, codes.Internal, status.Code(err))
+}
+
 func TestSecretsServer(t *testing.T) {
 	t.Parallel()
 

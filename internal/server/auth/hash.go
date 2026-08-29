@@ -18,6 +18,8 @@ const (
 	hashThreads   = 1
 	hashSaltLen   = 16
 	hashKeyLen    = 32
+	// Upper bound for the memory param read from a stored hash.
+	maxVerifyMemoryKiB = 1 << 20 // 1 GiB
 )
 
 var errMalformedHash = errors.New("malformed password hash")
@@ -62,6 +64,10 @@ func verifyPassword(phc, password string) (bool, error) {
 		return false, errMalformedHash
 	}
 
+	if timeCost < 1 || threads < 1 || memoryKiB < 1 || memoryKiB > maxVerifyMemoryKiB {
+		return false, errMalformedHash
+	}
+
 	b64 := base64.RawStdEncoding
 	salt, err := b64.DecodeString(parts[4])
 	if err != nil {
@@ -69,6 +75,9 @@ func verifyPassword(phc, password string) (bool, error) {
 	}
 	want, err := b64.DecodeString(parts[5])
 	if err != nil {
+		return false, errMalformedHash
+	}
+	if len(salt) == 0 || len(want) == 0 {
 		return false, errMalformedHash
 	}
 

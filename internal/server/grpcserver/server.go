@@ -56,10 +56,15 @@ type Server struct {
 // New builds a Server. tlsConfig may be nil, and then the server
 // speaks plain HTTP/2 (dev only; TLS arrives in its own stage).
 func New(addr string, authSvc AuthService, secrets SecretStore, tokens TokenService, log *zap.Logger, tlsConfig *tls.Config) *Server {
-	// Logging comes first, so requests rejected by auth are
-	// logged too.
+	// Recovery comes first, so it also covers a panic in the
+	// other interceptors. Logging comes next, so requests
+	// rejected by auth are logged too.
 	opts := []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(loggingInterceptor(log), authInterceptor(tokens, log)),
+		grpc.ChainUnaryInterceptor(
+			recoveryInterceptor(log),
+			loggingInterceptor(log),
+			authInterceptor(tokens, log),
+		),
 	}
 	if tlsConfig != nil {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))

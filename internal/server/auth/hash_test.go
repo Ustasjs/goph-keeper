@@ -47,6 +47,14 @@ func TestVerifyPassword_malformedHash(t *testing.T) {
 		{"wrong algorithm", "$bcrypt$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA"},
 		{"missing parts", "$argon2id$v=19$m=19456,t=2,p=1"},
 		{"bad salt base64", "$argon2id$v=19$m=19456,t=2,p=1$???$aGFzaA"},
+		// Broken params must return an error, not panic inside
+		// argon2 and not try to allocate huge memory.
+		{"zero time", "$argon2id$v=19$m=19456,t=0,p=1$c2FsdA$aGFzaA"},
+		{"zero threads", "$argon2id$v=19$m=19456,t=2,p=0$c2FsdA$aGFzaA"},
+		{"zero memory", "$argon2id$v=19$m=0,t=2,p=1$c2FsdA$aGFzaA"},
+		{"huge memory", "$argon2id$v=19$m=4294967295,t=2,p=1$c2FsdA$aGFzaA"},
+		{"empty salt", "$argon2id$v=19$m=19456,t=2,p=1$$aGFzaA"},
+		{"empty hash", "$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
