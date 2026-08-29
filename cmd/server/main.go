@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	stdlog "log"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -38,19 +39,21 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		stdlog.Println(err)
-		return
+		os.Exit(1)
 	}
 
 	log, err := logger.New(cfg.LogLevel)
 	if err != nil {
 		stdlog.Println(err)
-		return
+		os.Exit(1)
 	}
-	defer func() { _ = log.Sync() }()
 
 	if err := run(cfg, log); err != nil {
 		log.Error("server terminated with error", zap.Error(err))
+		_ = log.Sync()
+		os.Exit(1)
 	}
+	_ = log.Sync()
 }
 
 func run(cfg config.Config, log *zap.Logger) error {
