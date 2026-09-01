@@ -34,6 +34,16 @@ type Config struct {
 	TokenTTL time.Duration
 	// LogLevel is a zap level name: debug, info, warn, error.
 	LogLevel string
+	// TLSCertFile and TLSKeyFile turn on TLS. Both must be set
+	// together. Without them the server speaks plain HTTP/2,
+	// which is fine only for local work.
+	TLSCertFile string
+	TLSKeyFile  string
+}
+
+// TLSEnabled reports whether the server must serve over TLS.
+func (c Config) TLSEnabled() bool {
+	return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
 // Load reads the settings for the running program. It must be
@@ -63,6 +73,8 @@ func loadFrom(fs *flag.FlagSet, args []string, lookupEnv func(string) (string, b
 	fs.StringVar(&cfg.DatabaseDSN, "d", cfg.DatabaseDSN, "postgres connection string")
 	fs.StringVar(&cfg.LogLevel, "l", cfg.LogLevel, "log level: debug, info, warn, error")
 	fs.DurationVar(&cfg.TokenTTL, "token-ttl", cfg.TokenTTL, "auth token lifetime")
+	fs.StringVar(&cfg.TLSCertFile, "tls-cert", cfg.TLSCertFile, "TLS certificate file; turns on TLS together with -tls-key")
+	fs.StringVar(&cfg.TLSKeyFile, "tls-key", cfg.TLSKeyFile, "TLS private key file")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, fmt.Errorf("parse flags: %w", err)
 	}
@@ -86,6 +98,12 @@ func applyEnv(cfg *Config, lookupEnv func(string) (string, bool)) error {
 	if v, ok := lookupEnv("JWT_SECRET"); ok {
 		cfg.JWTSecret = v
 	}
+	if v, ok := lookupEnv("TLS_CERT_FILE"); ok && v != "" {
+		cfg.TLSCertFile = v
+	}
+	if v, ok := lookupEnv("TLS_KEY_FILE"); ok && v != "" {
+		cfg.TLSKeyFile = v
+	}
 	if v, ok := lookupEnv("TOKEN_TTL"); ok && v != "" {
 		ttl, err := time.ParseDuration(v)
 		if err != nil {
@@ -105,6 +123,12 @@ func (c Config) validate() error {
 	}
 	if c.TokenTTL <= 0 {
 		return fmt.Errorf("token lifetime must be positive, got %s", c.TokenTTL)
+	}
+	// Half a TLS setup is a mistake, not a choice: it would
+	// start the server without encryption while the operator
+	// thinks it is on.
+	if (c.TLSCertFile == "") != (c.TLSKeyFile == "") {
+		return errors.New("TLS needs both certificate and key (-tls-cert and -tls-key)")
 	}
 	return nil
 }

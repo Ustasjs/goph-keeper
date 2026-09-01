@@ -135,3 +135,53 @@ func TestLoad_badValues(t *testing.T) {
 	_, err = testLoad(t, []string{"-token-ttl", "0"}, requiredEnv())
 	assert.ErrorContains(t, err, "must be positive")
 }
+
+func TestLoad_tlsSettings(t *testing.T) {
+	t.Parallel()
+
+	t.Run("off by default", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, err := testLoad(t, nil, requiredEnv())
+		require.NoError(t, err)
+		assert.False(t, cfg.TLSEnabled())
+	})
+
+	t.Run("from env", func(t *testing.T) {
+		t.Parallel()
+
+		env := requiredEnv()
+		env["TLS_CERT_FILE"] = "/etc/cert.pem"
+		env["TLS_KEY_FILE"] = "/etc/key.pem"
+
+		cfg, err := testLoad(t, nil, env)
+		require.NoError(t, err)
+		assert.True(t, cfg.TLSEnabled())
+		assert.Equal(t, "/etc/cert.pem", cfg.TLSCertFile)
+	})
+
+	t.Run("flag wins over env", func(t *testing.T) {
+		t.Parallel()
+
+		env := requiredEnv()
+		env["TLS_CERT_FILE"] = "/etc/env-cert.pem"
+		env["TLS_KEY_FILE"] = "/etc/key.pem"
+
+		cfg, err := testLoad(t, []string{"-tls-cert", "/tmp/flag-cert.pem"}, env)
+		require.NoError(t, err)
+		assert.Equal(t, "/tmp/flag-cert.pem", cfg.TLSCertFile)
+		assert.Equal(t, "/etc/key.pem", cfg.TLSKeyFile)
+	})
+
+	t.Run("half a setup is an error", func(t *testing.T) {
+		t.Parallel()
+
+		// Only a certificate: the server would start without
+		// encryption while the operator thinks TLS is on.
+		_, err := testLoad(t, []string{"-tls-cert", "/tmp/cert.pem"}, requiredEnv())
+		assert.ErrorContains(t, err, "both certificate and key")
+
+		_, err = testLoad(t, []string{"-tls-key", "/tmp/key.pem"}, requiredEnv())
+		assert.ErrorContains(t, err, "both certificate and key")
+	})
+}

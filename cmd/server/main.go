@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	stdlog "log"
@@ -21,6 +22,7 @@ import (
 	"github.com/ustasjs/goph-keeper/internal/server/grpcserver"
 	"github.com/ustasjs/goph-keeper/internal/server/storage/postgres"
 	"github.com/ustasjs/goph-keeper/internal/server/token"
+	"github.com/ustasjs/goph-keeper/internal/tlscert"
 	"github.com/ustasjs/goph-keeper/migrations"
 )
 
@@ -73,15 +75,28 @@ func run(cfg config.Config, log *zap.Logger) error {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
+	var tlsConfig *tls.Config
+	if cfg.TLSEnabled() {
+		tlsConfig, err = tlscert.ServerConfigFromFiles(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Warn("TLS is off, the connection is not encrypted",
+			zap.String("hint", "set -tls-cert and -tls-key"))
+	}
+
 	storage := postgres.New(pool)
 	tokens := token.New([]byte(cfg.JWTSecret), cfg.TokenTTL)
 	authSvc := auth.New(storage, tokens)
-	server := grpcserver.New(cfg.Address, authSvc, storage, tokens, log, nil)
+	server := grpcserver.New(cfg.Address, authSvc, storage, tokens, log, tlsConfig)
 
 	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		log.Info("starting gRPC server", zap.String("address", cfg.Address))
+		log.Info("starting gRPC server",
+			zap.String("address", cfg.Address),
+			zap.Bool("tls", cfg.TLSEnabled()))
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, grpcserver.ErrServerStopped) {
 			return err
 		}
