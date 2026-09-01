@@ -36,8 +36,11 @@ const (
 type App struct {
 	store *store.Store
 	addr  string
-	out   io.Writer
-	in    *bufio.Reader
+	// connect holds how to reach the server: TLS settings and
+	// the CA file for a self-signed certificate.
+	connect remote.Options
+	out     io.Writer
+	in      *bufio.Reader
 	// tty is set when the input is a real terminal; then
 	// passwords are read without echo.
 	tty *os.File
@@ -47,8 +50,8 @@ type App struct {
 }
 
 // NewApp builds the application state.
-func NewApp(st *store.Store, addr string, out io.Writer, in io.Reader) *App {
-	app := &App{store: st, addr: addr, out: out, in: bufio.NewReader(in)}
+func NewApp(st *store.Store, addr string, connect remote.Options, out io.Writer, in io.Reader) *App {
+	app := &App{store: st, addr: addr, connect: connect, out: out, in: bufio.NewReader(in)}
 	if file, ok := in.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
 		app.tty = file
 	}
@@ -69,7 +72,7 @@ func (a *App) remoteClient() (*remote.Client, error) {
 		return a.client, nil
 	}
 
-	client, err := remote.New(a.addr, a.store)
+	client, err := remote.New(a.addr, a.store, a.connect)
 	if err != nil {
 		return nil, err
 	}

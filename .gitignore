@@ -14,6 +14,10 @@
 # Binaries
 bin/
 
+# Local dev certificates
+dev-cert.pem
+dev-key.pem
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 

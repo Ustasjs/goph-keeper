@@ -11,10 +11,12 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/ustasjs/goph-keeper/internal/client/crypt"
+	"github.com/ustasjs/goph-keeper/internal/tlscert"
 	gophkeeperv1 "github.com/ustasjs/goph-keeper/pkg/proto/gophkeeper/v1"
 )
 
@@ -41,15 +43,29 @@ type Client struct {
 	tokens  TokenStore
 }
 
+// Options are the connection settings.
+type Options struct {
+	// CAFile is a certificate file to trust on top of the system
+	// roots. It is needed for a self-signed server certificate.
+	CAFile string
+	// Insecure turns TLS off. Secret data then travels in the
+	// open, so it is for local work only.
+	Insecure bool
+}
+
 // New connects to the server at addr. The interceptor sends the
 // saved token with every call and saves the fresh token from
 // every answer, which keeps the session alive.
 //
-// The connection is not encrypted yet; TLS comes in its own
-// stage.
-func New(addr string, tokens TokenStore) (*Client, error) {
+// The connection uses TLS unless opts.Insecure says otherwise.
+func New(addr string, tokens TokenStore, opts Options) (*Client, error) {
+	creds, err := transportCredentials(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(creds),
 		grpc.WithChainUnaryInterceptor(tokenInterceptor(tokens)),
 	)
 	if err != nil {
@@ -123,6 +139,19 @@ func (c *Client) Login(ctx context.Context, login, password string) (CryptoBundl
 		KDFParams:    kdfParamsFromProto(resp.GetKdfParams()),
 		EncryptedDEK: resp.GetEncryptedDek(),
 	}, nil
+}
+
+// transportCredentials picks how the connection is protected.
+func transportCredentials(opts Options) (credentials.TransportCredentials, error) {
+	if opts.Insecure {
+		return insecure.NewCredentials(), nil
+	}
+
+	tlsConfig, err := tlscert.ClientConfig(opts.CAFile)
+	if err != nil {
+		return nil, err
+	}
+	return credentials.NewTLS(tlsConfig), nil
 }
 
 func kdfParamsToProto(params crypt.KDFParams) *gophkeeperv1.KdfParams {

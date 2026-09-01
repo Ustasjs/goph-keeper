@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -15,6 +17,7 @@ import (
 	"github.com/ustasjs/goph-keeper/internal/server/auth"
 	"github.com/ustasjs/goph-keeper/internal/server/grpcserver"
 	"github.com/ustasjs/goph-keeper/internal/server/token"
+	"github.com/ustasjs/goph-keeper/internal/tlscert"
 )
 
 // memStore is the server storage kept in memory. It implements
@@ -133,14 +136,23 @@ func (m *memStore) DeleteSecret(_ context.Context, userID, id string) error {
 	return nil
 }
 
-// startServer runs the real gRPC server on a free local port and
-// returns its address.
-func startServer(t *testing.T) string {
+// startServer runs the real gRPC server over TLS on a free local
+// port. It returns the address and the CA file the client needs
+// to trust the self-signed certificate.
+func startServer(t *testing.T) (addr, caFile string) {
 	t.Helper()
+
+	certPEM, keyPEM, err := tlscert.GeneratePEM()
+	require.NoError(t, err)
+	tlsConfig, err := tlscert.ServerConfig(certPEM, keyPEM)
+	require.NoError(t, err)
+
+	caFile = filepath.Join(t.TempDir(), "ca.pem")
+	require.NoError(t, os.WriteFile(caFile, certPEM, 0o600))
 
 	store := newMemStore()
 	tokens := token.New([]byte("test-secret"), time.Hour)
-	srv := grpcserver.New("", auth.New(store, tokens), store, tokens, zap.NewNop(), nil)
+	srv := grpcserver.New("", auth.New(store, tokens), store, tokens, zap.NewNop(), tlsConfig)
 
 	var lc net.ListenConfig
 	lis, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
@@ -153,5 +165,5 @@ func startServer(t *testing.T) string {
 		_ = srv.Shutdown(ctx)
 	})
 
-	return lis.Addr().String()
+	return lis.Addr().String(), caFile
 }

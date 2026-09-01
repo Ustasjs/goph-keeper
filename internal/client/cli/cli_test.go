@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ustasjs/goph-keeper/internal/client/remote"
 	"github.com/ustasjs/goph-keeper/internal/client/store"
 )
 
@@ -26,14 +27,17 @@ type testCLI struct {
 	out *bytes.Buffer
 }
 
-func newTestCLI(t *testing.T, addr string) *testCLI {
+func newTestCLI(t *testing.T, addr, caFile string) *testCLI {
 	t.Helper()
 
 	st, err := store.New(filepath.Join(t.TempDir(), "gophkeeper"))
 	require.NoError(t, err)
 
 	out := &bytes.Buffer{}
-	app := NewApp(st, addr, out, strings.NewReader(""))
+	// The server certificate is self-signed, so the client must
+	// be told to trust it.
+	connect := remote.Options{CAFile: caFile}
+	app := NewApp(st, addr, connect, out, strings.NewReader(""))
 	t.Cleanup(func() { _ = app.Close() })
 
 	return &testCLI{t: t, app: app, out: out}
@@ -69,7 +73,8 @@ func setPasswords(t *testing.T) {
 
 func TestCLI_registerAddGet(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 
 	out := cli.mustRun("register", "--login", "alice")
 	assert.Contains(t, out, "Registered as alice")
@@ -95,7 +100,8 @@ func TestCLI_registerAddGet(t *testing.T) {
 
 func TestCLI_everyRecordType(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 	cli.mustRun("register", "--login", "alice")
 
 	file := filepath.Join(t.TempDir(), "scan.pdf")
@@ -119,7 +125,8 @@ func TestCLI_everyRecordType(t *testing.T) {
 
 func TestCLI_deleteRecord(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 	cli.mustRun("register", "--login", "alice")
 	cli.mustRun("add", "text", "--name", "note", "--text", "private")
 
@@ -131,14 +138,14 @@ func TestCLI_deleteRecord(t *testing.T) {
 
 func TestCLI_secondClientSeesTheData(t *testing.T) {
 	setPasswords(t)
-	addr := startServer(t)
+	addr, caFile := startServer(t)
 
-	first := newTestCLI(t, addr)
+	first := newTestCLI(t, addr, caFile)
 	first.mustRun("register", "--login", "alice")
 	first.mustRun("add", "text", "--name", "note", "--text", "shared secret")
 
 	// Another machine: its own state directory, same account.
-	second := newTestCLI(t, addr)
+	second := newTestCLI(t, addr, caFile)
 	second.mustRun("login", "--login", "alice")
 
 	out := second.mustRun("get", "note")
@@ -147,7 +154,8 @@ func TestCLI_secondClientSeesTheData(t *testing.T) {
 
 func TestCLI_wrongMasterPassword(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 	cli.mustRun("register", "--login", "alice")
 	cli.mustRun("add", "text", "--name", "note", "--text", "private")
 
@@ -160,14 +168,15 @@ func TestCLI_wrongMasterPassword(t *testing.T) {
 
 func TestCLI_offlineReadsLocalCopy(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 	cli.mustRun("register", "--login", "alice")
 	cli.mustRun("add", "text", "--name", "note", "--text", "cached secret")
 	// This call fills the local copy.
 	cli.mustRun("list")
 
 	// The same state directory, but the server is gone.
-	offline := newTestCLI(t, "127.0.0.1:1")
+	offline := newTestCLI(t, "127.0.0.1:1", caFile)
 	offline.app.store = cli.app.store
 
 	out := offline.mustRun("list")
@@ -185,7 +194,8 @@ func TestCLI_offlineReadsLocalCopy(t *testing.T) {
 
 func TestCLI_duplicateNamesNeedID(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 	cli.mustRun("register", "--login", "alice")
 	cli.mustRun("add", "text", "--name", "same", "--text", "first")
 	cli.mustRun("add", "text", "--name", "same", "--text", "second")
@@ -197,14 +207,16 @@ func TestCLI_duplicateNamesNeedID(t *testing.T) {
 
 func TestCLI_notLoggedIn(t *testing.T) {
 	setPasswords(t)
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 
 	_, err := cli.run("list")
 	assert.Error(t, err)
 }
 
 func TestCLI_version(t *testing.T) {
-	cli := newTestCLI(t, startServer(t))
+	addr, caFile := startServer(t)
+	cli := newTestCLI(t, addr, caFile)
 
 	SetBuildInfo("v1.2.3", "2026-08-29")
 	out := cli.mustRun("version")
