@@ -4,6 +4,107 @@
 
 Типы хранимых данных: пары логин/пароль, произвольный текст, бинарные данные, банковские карты. К любой записи прилагается произвольная текстовая метаинформация.
 
+## Быстрый старт
+
+Нужны Go 1.25+, Docker и `protoc` (только если меняете proto-контракт).
+
+```bash
+make build                           # бинарники в bin/
+docker compose up -d postgres        # postgres на порту 5433
+make cert                            # самоподписанный сертификат для локального TLS
+```
+
+Запуск сервера:
+
+```bash
+DATABASE_DSN="postgres://gophkeeper:gophkeeper@localhost:5433/gophkeeper?sslmode=disable" \
+JWT_SECRET=dev-secret \
+./bin/server -tls-cert dev-cert.pem -tls-key dev-key.pem
+```
+
+Работа клиентом (в другом терминале):
+
+```bash
+export GOPHKEEPER_CA_FILE=dev-cert.pem
+./bin/client register --login alice
+./bin/client add login-password --name github --login alice@example.com --metadata "work"
+./bin/client list
+./bin/client get github --reveal
+```
+
+Клиент спросит пароли интерактивно, без эха. Миграции применяются при старте сервера сами.
+
+## Сборка
+
+```bash
+make build       # сервер и клиент для текущей платформы, в bin/
+make build-all   # клиент для Linux, macOS (amd64 и arm64) и Windows
+make test        # все тесты
+make lint        # golangci-lint
+```
+
+Версия и дата сборки вшиваются через `-ldflags` и доступны обеим программам:
+
+```bash
+./bin/client version
+```
+
+## Команды клиента
+
+| Команда | Что делает |
+|---|---|
+| `register --login <login>` | Создаёт аккаунт: спросит пароль аккаунта и мастер-пароль |
+| `login --login <login>` | Вход на сервер |
+| `logout` | Забывает токен, сессию и локальную копию |
+| `list` | Показывает все записи (мастер-пароль не нужен) |
+| `get <id\|name> [--reveal]` | Показывает запись; секретные поля скрыты без `--reveal` |
+| `add login-password` | Добавляет пару логин/пароль |
+| `add text` | Добавляет текстовую заметку |
+| `add binary --file <path>` | Добавляет файл (до 4 МБ) |
+| `add card` | Добавляет данные банковской карты |
+| `delete <id\|name>` | Удаляет запись |
+| `version` | Версия и дата сборки |
+
+Запись адресуется по UUID или по имени. Если имя неоднозначно, клиент попросит указать UUID.
+
+## Настройки
+
+Приоритет: **флаги > переменные окружения > значения по умолчанию**.
+
+Сервер:
+
+| Флаг | Переменная | По умолчанию | Назначение |
+|---|---|---|---|
+| `-a` | `ADDRESS` | `localhost:3200` | адрес прослушивания |
+| `-d` | `DATABASE_DSN` | — (обязательно) | строка подключения к Postgres |
+| — | `JWT_SECRET` | — (обязательно) | ключ подписи токенов |
+| `-l` | `LOG_LEVEL` | `info` | уровень логирования |
+| `-token-ttl` | `TOKEN_TTL` | `24h` | время жизни одного токена |
+| `-tls-cert` | `TLS_CERT_FILE` | — | сертификат; включает TLS вместе с ключом |
+| `-tls-key` | `TLS_KEY_FILE` | — | приватный ключ |
+
+У `JWT_SECRET` нет флага сознательно: аргументы командной строки видны другим процессам и остаются в истории шелла.
+
+Клиент (только переменные окружения):
+
+| Переменная | По умолчанию | Назначение |
+|---|---|---|
+| `GOPHKEEPER_ADDRESS` | `localhost:3200` | адрес сервера |
+| `GOPHKEEPER_CA_FILE` | — | сертификат сервера, если он самоподписанный |
+| `GOPHKEEPER_INSECURE` | — | `1` отключает TLS (только для локальной отладки) |
+| `GOPHKEEPER_HOME` | `~/.gophkeeper` | каталог состояния |
+| `GOPHKEEPER_PASSWORD` | — | пароль аккаунта для скриптов |
+| `GOPHKEEPER_MASTER_PASSWORD` | — | мастер-пароль для скриптов |
+
+## Тесты
+
+```bash
+make test                                  # юнит-тесты, тесты БД скипаются
+DATABASE_DSN="postgres://gophkeeper:gophkeeper@localhost:5433/gophkeeper?sslmode=disable" make test
+```
+
+Покрытие устроено по уровням: юнит-тесты пакетов, тесты хранилища против настоящего Postgres, функциональные тесты CLI (настоящий сервер поверх TLS с хранилищем в памяти) и интеграционные тесты в `internal/integration` — клиент, сервер и Postgres одновременно. Тесты, которым нужна база, пропускаются без `DATABASE_DSN`.
+
 ## Архитектура
 - **Протокол:** gRPC поверх TLS. Контракт описан в [api/proto/gophkeeper/v1/gophkeeper.proto](api/proto/gophkeeper/v1/gophkeeper.proto), включая семантику ошибок каждого RPC.
 - **Сервер** отвечает за аутентификацию, хранение и выдачу записей. Данные для него непрозрачны.
@@ -69,6 +170,8 @@
 - **Утеря мастер-пароля = утеря данных.** Восстановление невозможно by design: сервер не располагает ничем, что помогло бы расшифровать DEK.
 - **Оффлайн — только чтение:** без сервера доступны `get`/`list` из локального кеша (по состоянию на последнюю синхронизацию). Запись оффлайн не поддерживается.
 - Одновременное редактирование одной записи с разных клиентов разрешается по last write wins — «проигравшая» версия не сохраняется.
+- **Изменения записи в CLI нет:** правка делается удалением и добавлением заново. Серверный API `UpdateSecret` при этом реализован и покрыт тестами.
+- Самоподписанный сертификат из `make cert` — для локальной работы. Для реального сервера нужен сертификат от удостоверяющего центра, тогда клиенту не нужен `GOPHKEEPER_CA_FILE`.
 
 ## Схема БД
 
@@ -80,10 +183,15 @@
 ## Структура репозитория
 
 ```
-api/proto/    — proto-контракт (источник истины API)
-pkg/proto/    — сгенерированный gRPC-код
-cmd/server/   — entrypoint сервера
-cmd/client/   — entrypoint CLI-клиента
-internal/     — код сервера и клиента
-migrations/   — SQL-миграции (golang-migrate)
+api/proto/            — proto-контракт (источник истины API)
+pkg/proto/            — сгенерированный gRPC-код
+cmd/server/           — entrypoint сервера
+cmd/client/           — entrypoint CLI-клиента
+cmd/certgen/          — генератор сертификата для локального TLS
+internal/server/      — auth, secrets, хранилище, gRPC-слой, конфиг
+internal/client/      — crypt (KDF, AES-GCM), payload, store, remote, cli
+internal/secret/      — доменный тип записи, общий для клиента и сервера
+internal/tlscert/     — генерация и настройка TLS
+internal/integration/ — интеграционные тесты (клиент + сервер + Postgres)
+migrations/           — SQL-миграции (golang-migrate, embed)
 ```

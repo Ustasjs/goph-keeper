@@ -6,7 +6,7 @@ VERSION ?= $(shell git describe --tags --always 2>/dev/null || echo dev)
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X main.buildVersion=$(VERSION) -X main.buildDate=$(BUILD_DATE)
 
-.PHONY: run test lint build cert proto proto-tools
+.PHONY: run test lint build build-all cert clean proto proto-tools
 
 run:
 	go run ./cmd/server
@@ -25,6 +25,18 @@ cert:
 build:
 	go build -ldflags "$(LDFLAGS)" -o bin/server ./cmd/server
 	go build -ldflags "$(LDFLAGS)" -o bin/client ./cmd/client
+
+# Build the client for every supported platform. The server
+# stays local: it runs where the database is.
+build-all:
+	GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/client-linux-amd64    ./cmd/client
+	GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/client-darwin-amd64   ./cmd/client
+	GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o bin/client-darwin-arm64   ./cmd/client
+	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/client-windows-amd64.exe ./cmd/client
+	GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o bin/server-linux-amd64    ./cmd/server
+
+clean:
+	rm -rf bin
 
 # Generate Go code from proto files into pkg/proto.
 proto:
