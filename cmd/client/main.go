@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/ustasjs/goph-keeper/internal/client/cli"
+	"github.com/ustasjs/goph-keeper/internal/client/remote"
 	"github.com/ustasjs/goph-keeper/internal/client/store"
 )
 
@@ -46,7 +47,15 @@ func run() error {
 		addr = defaultAddress
 	}
 
-	app := cli.NewApp(st, addr, os.Stdout, os.Stdin)
+	// TLS is on by default. GOPHKEEPER_CA_FILE points to the
+	// server certificate when it is self-signed;
+	// GOPHKEEPER_INSECURE=1 turns encryption off for local work.
+	connect := remote.Options{
+		CAFile:   os.Getenv("GOPHKEEPER_CA_FILE"),
+		Insecure: os.Getenv("GOPHKEEPER_INSECURE") == "1",
+	}
+
+	app := cli.NewApp(st, addr, connect, os.Stdout, os.Stdin)
 	defer func() { _ = app.Close() }()
 
 	return cli.NewRootCmd(app).ExecuteContext(ctx)

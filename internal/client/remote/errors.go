@@ -3,6 +3,7 @@ package remote
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,7 +23,24 @@ var (
 	ErrInvalidCredentials = errors.New("invalid login or password")
 	// ErrTooLarge means the message did not fit the size limit.
 	ErrTooLarge = errors.New("data is too large for one message")
+	// ErrUntrustedServer means the TLS handshake failed: the
+	// server certificate is unknown or does not match the
+	// address.
+	ErrUntrustedServer = errors.New("cannot verify the server certificate")
 )
+
+// tlsProblem tells a certificate problem from a server that is
+// simply down. gRPC reports both as Unavailable, but the fix is
+// different: one needs GOPHKEEPER_CA_FILE, the other needs a
+// running server.
+func tlsProblem(message string) bool {
+	for _, sign := range []string{"certificate", "x509", "tls:", "handshake"} {
+		if strings.Contains(message, sign) {
+			return true
+		}
+	}
+	return false
+}
 
 // wrapError turns a gRPC status into an error the CLI can show
 // and the commands can check with errors.Is. The server message
@@ -39,6 +57,10 @@ func wrapError(op string, err error) error {
 
 	switch st.Code() {
 	case codes.Unavailable, codes.DeadlineExceeded:
+		if tlsProblem(st.Message()) {
+			return fmt.Errorf("%s: %w: %s (set GOPHKEEPER_CA_FILE for a self-signed certificate)",
+				op, ErrUntrustedServer, st.Message())
+		}
 		return fmt.Errorf("%s: %w", op, ErrUnavailable)
 	case codes.Unauthenticated:
 		return fmt.Errorf("%s: %w", op, ErrUnauthenticated)
